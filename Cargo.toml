@@ -1,0 +1,34 @@
+[package]
+name = "ts6rpc"
+version = "0.2.0"
+edition = "2024"
+description = "Discord Rich Presence for TeamSpeak 6"
+license = "MIT"
+repository = "https://github.com/wildesPepega/ts6rpc"
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+dirs = { version = "7.0.0", default-features = false }
+futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tokio = { version = "1.54.1", features = ["rt", "macros", "net", "time", "sync", "signal", "io-util"] }
+tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ksni = "0.3.7"
+
+[target.'cfg(windows)'.dependencies]
+tray-icon = { version = "0.26.1", default-features = false }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging", "Win32_System_Registry"] }
+
+[build-dependencies]
+winresource = "0.1.34"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = "s"
+panic = "abort"

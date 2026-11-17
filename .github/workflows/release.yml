@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,x86_64-pc-windows-gnu
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cross-compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mingw-w64
+          pip install ziglang
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+
+      - name: Test
+        run: |
+          cargo test --release
+          cargo clippy --release --all-targets -- -D warnings
+          cargo clippy --release --target x86_64-pc-windows-gnu -- -D warnings
+
+      - name: Build
+        run: |
+          cargo zigbuild --release --target x86_64-unknown-linux-musl
+          cargo zigbuild --release --target aarch64-unknown-linux-musl
+          cargo build --release --target x86_64-pc-windows-gnu
+          mkdir dist
+          cp target/x86_64-unknown-linux-musl/release/ts6rpc dist/ts6rpc-linux-x86_64
+          cp target/aarch64-unknown-linux-musl/release/ts6rpc dist/ts6rpc-linux-aarch64
+          cp target/x86_64-pc-windows-gnu/release/ts6rpc.exe dist/ts6rpc-windows-x86_64.exe
+          cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ts6rpc
+          path: dist/*
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
